@@ -247,7 +247,12 @@ struct Index {
 
   async deleteFailedRecords() {
     await DatabaseUtils.deleteFailedHistory();
-    this.refreshHistory();
+    // 原地移除失败记录，避免替换整个数组导致 ForEach 中 @ObjectLink 引用错乱
+    for (let i = this.historyList.length - 1; i >= 0; i--) {
+      if (this.historyList[i].status === 'failed') {
+        this.historyList.splice(i, 1);
+      }
+    }
     promptAction.showToast({ message: '已清理所有识别失败的记录' });
   }
 
@@ -258,7 +263,14 @@ struct Index {
       return;
     }
     await DatabaseUtils.deleteHistory(selectedIds);
-    this.refreshHistory();
+    // 原地移除已删除的项，避免替换整个数组导致 ForEach 中 @ObjectLink 引用错乱
+    for (let i = this.historyList.length - 1; i >= 0; i--) {
+      if (selectedIds.includes(this.historyList[i].taskId)) {
+        this.historyList.splice(i, 1);
+      }
+    }
+    // 清除剩余项的选中状态
+    this.historyList.forEach(item => item.isSelected = false);
     this.isEditMode = false;
     promptAction.showToast({ message: `成功删除 ${selectedIds.length} 条记录` });
   }
